@@ -3,11 +3,13 @@ package dev.whitelistnames;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 /** Server toggles, saved to config/whitelistnames-settings.json */
 public final class Settings {
@@ -44,6 +46,14 @@ public final class Settings {
 
 	public static boolean isEyeOfEnderRecipeDisabled() {
 		return eyeOfEnderRecipeDisabled;
+	}
+
+	/** True if this recipe lookup result is the Eye of Ender recipe and that recipe is disabled. */
+	public static boolean isBlockedRecipe(Optional<?> result) {
+		return eyeOfEnderRecipeDisabled
+				&& result.isPresent()
+				&& result.get() instanceof RecipeHolder<?> holder
+				&& holder.id().identifier().toString().equals("minecraft:ender_eye");
 	}
 
 	public static void setEyeOfEnderRecipeDisabled(boolean disabled) {
