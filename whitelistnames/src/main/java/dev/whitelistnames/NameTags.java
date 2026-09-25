@@ -6,9 +6,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Nametags: players with a nickname join a team that hides the vanilla nametag,
@@ -17,6 +17,9 @@ import java.util.UUID;
 public final class NameTags {
 	public static final String TEAM = "wn_nicknamed";
 	public static final String COMMON_TAG = "wn_nametag";
+	private static final String ORPHAN_TAG = "wn_orphan";
+	/** Player UUID -> UUID of the text display riding them. */
+	private static final Map<UUID, UUID> DISPLAYS = new ConcurrentHashMap<>();
 	private static int ticks;
 
 	private NameTags() {}
@@ -76,9 +79,10 @@ public final class NameTags {
 	}
 
 	private static boolean hasTag(ServerPlayer player) {
-		String tag = tagFor(player.getUUID());
+		UUID displayId = DISPLAYS.get(player.getUUID());
+		if (displayId == null) return false;
 		for (Entity passenger : player.getPassengers()) {
-			if (passenger.getTags().contains(tag)) return true;
+			if (passenger.getUUID().equals(displayId)) return true;
 		}
 		return false;
 	}
@@ -87,7 +91,11 @@ public final class NameTags {
 		String uuid = player.getUUID().toString();
 		String tag = tagFor(player.getUUID());
 		removeTag(server, player.getUUID());
+
+		// Summon with a known UUID so we can find the exact entity afterwards.
+		UUID displayId = UUID.randomUUID();
 		run(server, "execute as " + uuid + " at @s run summon minecraft:text_display ~ ~ ~ {"
+				+ "UUID:" + uuidArray(displayId) + ","
 				+ "text:\"" + escape(nick) + "\","
 				+ "billboard:\"center\","
 				+ "see_through:1b,"
@@ -96,29 +104,35 @@ public final class NameTags {
 				+ "translation:[0f,0.35f,0f],scale:[1f,1f,1f]}}");
 
 		// Vanilla /ride refuses to mount anything on a player, so mount it directly.
-		List<Entity> summoned = player.level().getEntities((Entity) null, player.getBoundingBox().inflate(2),
-				e -> !e.isRemoved() && e.getVehicle() == null && e.getTags().contains(tag));
-		for (Entity display : summoned) {
-			if (!display.startRiding(player)) {
-				WhitelistNames.LOGGER.warn("Could not attach nametag to {}", player.getName().getString());
-				display.discard();
-			}
+		Entity display = ((ServerLevel) player.level()).getEntity(displayId);
+		if (display == null) return;
+		if (display.startRiding(player)) {
+			DISPLAYS.put(player.getUUID(), displayId);
+		} else {
+			WhitelistNames.LOGGER.warn("Could not attach nametag to {}", player.getName().getString());
+			display.discard();
 		}
 	}
 
 	public static void removeTag(MinecraftServer server, UUID id) {
+		DISPLAYS.remove(id);
 		run(server, "kill @e[type=minecraft:text_display,tag=" + tagFor(id) + "]");
 	}
 
 	/** Removes nametag displays that got left behind (not riding anyone). */
 	private static void cleanupOrphans(MinecraftServer server) {
-		for (ServerLevel level : server.getAllLevels()) {
-			List<Entity> doomed = new ArrayList<>();
-			for (Entity e : level.getAllEntities()) {
-				if (e.getTags().contains(COMMON_TAG) && e.getVehicle() == null) doomed.add(e);
-			}
-			doomed.forEach(Entity::discard);
-		}
+		// Mark every nametag, unmark the ones riding something, kill the rest.
+		run(server, "tag @e[type=minecraft:text_display,tag=" + COMMON_TAG + "] add " + ORPHAN_TAG);
+		run(server, "execute as @e[type=minecraft:text_display,tag=" + COMMON_TAG + "] on vehicle on passengers"
+				+ " run tag @s remove " + ORPHAN_TAG);
+		run(server, "kill @e[type=minecraft:text_display,tag=" + ORPHAN_TAG + "]");
+	}
+
+	/** SNBT int array form of a UUID, e.g. [I;1,2,3,4]. */
+	private static String uuidArray(UUID id) {
+		long most = id.getMostSignificantBits();
+		long least = id.getLeastSignificantBits();
+		return "[I;" + (int) (most >> 32) + "," + (int) most + "," + (int) (least >> 32) + "," + (int) least + "]";
 	}
 
 	private static String escape(String s) {
