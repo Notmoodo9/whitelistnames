@@ -24,6 +24,6 @@ public abstract class RecipeManagerMixin {
 	}
 
 	private static boolean isEyeOfEnder(RecipeHolder<?> holder) {
-		return holder.id().location().toString().equals("minecraft:ender_eye");
+		return holder.id().identifier().toString().equals("minecraft:ender_eye");
 	}
 }
