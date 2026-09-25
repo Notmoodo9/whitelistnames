@@ -52,8 +52,8 @@ jobs:
 
       - name: TEMP inspect vanilla code
         run: |
-          find ~/.gradle .gradle -name '*.jar' 2>/dev/null | grep -i minecraft | grep -v sources | head -20
-          JAR=$(find ~/.gradle .gradle -name '*.jar' 2>/dev/null | grep -i minecraft | grep -v sources | xargs -r ls -S | head -1)
+          set +e
+          JAR=$(find ~/.gradle -name 'minecraft-merged-deobf-26.2.jar' | head -1)
           echo "JAR=$JAR"
           CP="$JAR"
           jp() { echo "===== $*"; javap -cp "$CP" "$@" 2>&1; }
