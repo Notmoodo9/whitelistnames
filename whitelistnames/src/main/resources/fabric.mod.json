@@ -3,15 +3,15 @@
   "id": "whitelistnames",
   "version": "${version}",
   "name": "Whitelist Names",
-  "description": "/whitelist add <username> <name> gives players a custom name in chat, tab list and nametag. /changename to rename. Custom whitelist messages.",
+  "description": "Server-side: /whitelist add <username> <name> gives whitelisted players a custom name in chat, the tab list and above their head. /changename to rename.",
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.whitelistnames.WhitelistNames"]
+    "main": ["dev.whitelistnames.WhitelistNames"]
   },
   "mixins": ["whitelistnames.mixins.json"],
   "depends": {
-    "fabricloader": ">=0.19.3",
+    "fabricloader": ">=0.19.5",
     "minecraft": "~26.2",
     "java": ">=25",
     "fabric-api": "*"
