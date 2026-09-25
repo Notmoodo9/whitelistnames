@@ -24,4 +24,7 @@ They're saved in `config/whitelistnames.json`.
 Needs JDK 25. Run `./gradlew build`; the mod is `build/libs/whitelistnames-1.0.0.jar`
 (not the `-sources` one). Put it plus Fabric API in the server's `mods` folder.
 
-GitHub Actions (`.github/workflows/build.yml`) builds on every push and uploads the jar as an artifact.
+## Downloading the jar
+- **Latest build:** the "Latest build" release on the repo's Releases page, updated on every push to `main`.
+- **Versioned release:** push a tag, e.g. `git tag v1.0.0 && git push origin v1.0.0`, and a release with the jar is created.
+- **Any branch/PR:** each workflow run in the Actions tab has the jar as a zipped artifact.
