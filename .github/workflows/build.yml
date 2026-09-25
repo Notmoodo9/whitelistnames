@@ -57,7 +57,7 @@ jobs:
           echo eula=true > run/eula.txt
           printf 'enable-rcon=true\nrcon.password=test\nrcon.port=25575\nonline-mode=false\nlevel-type=minecraft\\:flat\ngenerate-structures=false\nspawn-protection=0\n' > run/server.properties
           ./gradlew runServer --console=plain > server.log 2>&1 &
-          for i in $(seq 100); do grep -q 'Done (' server.log && break; grep -qE 'BUILD FAILED|Crash' server.log && break; sleep 5; done
+          for i in $(seq 100); do grep -q 'Done (' server.log && break; grep -qE 'BUILD FAILED|Crash|Failed to start|BUILD SUCCESSFUL' server.log && break; sleep 5; done
           echo "waited $((i*5))s"; tail -5 server.log
           timeout 120 python3 .github/smoke/rcon.py || true
           sleep 3
@@ -66,3 +66,4 @@ jobs:
           echo '===== last lines'
           tail -30 server.log
           pkill -f runServer || true; pkill java || true
+          grep -q 'Done (' server.log || { echo 'SERVER DID NOT START'; exit 1; }

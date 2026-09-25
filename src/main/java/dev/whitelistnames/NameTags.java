@@ -1,5 +1,6 @@
 package dev.whitelistnames;
 
+import dev.whitelistnames.mixin.EntityAccessor;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -21,8 +22,6 @@ public final class NameTags {
 	private static final String ORPHAN_TAG = "wn_orphan";
 	/** Player UUID -> UUID of the text display riding them. */
 	private static final Map<UUID, UUID> DISPLAYS = new ConcurrentHashMap<>();
-	/** Display entities we're allowed to mount on players (see EntityMixin). */
-	private static final Set<UUID> NAMETAG_IDS = ConcurrentHashMap.newKeySet();
 	/** Players we've already logged a nametag failure for, so the log isn't spammed every second. */
 	private static final Set<UUID> WARNED = ConcurrentHashMap.newKeySet();
 	private static int ticks;
@@ -108,25 +107,26 @@ public final class NameTags {
 				+ "transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],"
 				+ "translation:[0f,0.35f,0f],scale:[1f,1f,1f]}}");
 
-		// Vanilla /ride refuses to mount anything on a player, so mount it directly.
+		// Vanilla /ride refuses to mount anything on a player, so mount it in code.
 		Entity display = ((ServerLevel) player.level()).getEntity(displayId);
 		if (display == null) {
 			warnOnce(player, "the text_display could not be summoned");
 			return;
 		}
-		NAMETAG_IDS.add(displayId);
-		if (display.startRiding(player)) {
+		if (mount(display, player)) {
 			DISPLAYS.put(player.getUUID(), displayId);
 		} else {
-			NAMETAG_IDS.remove(displayId);
 			display.discard();
 			warnOnce(player, "the text_display could not ride the player");
 		}
 	}
 
-	/** True for our nametag displays; lets them ride players, which vanilla normally refuses. */
-	public static boolean isNametag(Entity entity) {
-		return NAMETAG_IDS.contains(entity.getUUID());
+	/** Same as display.startRiding(player), minus vanilla's refusal to mount things on players. */
+	private static boolean mount(Entity display, ServerPlayer player) {
+		if (display.isPassenger()) display.stopRiding();
+		((EntityAccessor) display).whitelistnames$setVehicle(player);
+		((EntityAccessor) player).whitelistnames$addPassenger(display);
+		return player.getPassengers().contains(display);
 	}
 
 	private static void warnOnce(ServerPlayer player, String reason) {
@@ -143,13 +143,11 @@ public final class NameTags {
 	/** Removes every nametag so none get saved into the world when the server stops. */
 	public static void removeAll(MinecraftServer server) {
 		DISPLAYS.clear();
-		NAMETAG_IDS.clear();
 		run(server, "kill @e[type=minecraft:text_display,tag=" + COMMON_TAG + "]");
 	}
 
 	public static void removeTag(MinecraftServer server, UUID id) {
-		UUID displayId = DISPLAYS.remove(id);
-		if (displayId != null) NAMETAG_IDS.remove(displayId);
+		DISPLAYS.remove(id);
 		run(server, "kill @e[type=minecraft:text_display,tag=" + tagFor(id) + "]");
 	}
 

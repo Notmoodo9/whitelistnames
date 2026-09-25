@@ -5,7 +5,7 @@
   "mixins": [
     "PlayerMixin",
     "ServerPlayerMixin",
-    "EntityMixin",
+    "EntityAccessor",
     "PlayerListMixin",
     "CommandSourceStackMixin"
   ],
