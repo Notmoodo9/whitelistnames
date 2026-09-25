@@ -19,6 +19,23 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v4
+      - name: TEMP inspect entity tracking
+        continue-on-error: true
+        run: |
+          set +e
+          ./gradlew -q help > /dev/null
+          JAR=$(find ~/.gradle -name 'minecraft-merged-deobf-26.2.jar' | head -1)
+          jp() { echo "===== $*"; javap -cp "$JAR" "$@" 2>&1; }
+          jp -p net.minecraft.world.entity.Entity | grep -iE 'broadcastToPlayer|isInvisibleTo|shouldBeSaved'
+          jp -c -p 'net.minecraft.server.level.ChunkMap$TrackedEntity' | grep -E 'invoke' | grep -iE 'broadcast|Entity\.|pairing|addPairing' | sort -u
+          jp -c -p net.minecraft.server.level.ServerEntity | awk '/sendPairingData/{p=1} p{print} /^$/{p=0}' | grep -E 'invoke|new|Passengers' | head -40
+          jp -c -p net.minecraft.server.level.ServerEntity | grep -E 'SetPassengers|lastPassengers|sendToTrackingPlayers|broadcast' | sort -u
+          jp -p net.minecraft.network.protocol.game.ClientboundSetPassengersPacket | grep -E 'public'
+          jp -p net.minecraft.server.level.ServerPlayer | grep -E ' connection'
+          jp -p net.minecraft.server.network.ServerCommonPacketListenerImpl | grep -E 'void send\('
+          jp -p net.minecraft.server.level.ServerLevel | grep -E 'players\(\)'
+          jp -c -p net.minecraft.client.multiplayer.ClientPacketListener | awk '/handleSetEntityPassengersPacket/{p=1} p{print} /^$/{p=0}' | grep -E 'invoke|ldc' | head -30
+          true
       - name: Build
         run: ./gradlew build --stacktrace
       - name: Find jar
