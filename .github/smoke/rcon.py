@@ -17,6 +17,8 @@ UUID = '00000001-0000-0002-0000-000300000004'
 SUMMON = ('summon minecraft:text_display 0 -60 0 {UUID:' + TAGS + ',text:"Mr \\"Q\\" Notch",billboard:"center",see_through:1b,'
           'Tags:["wn_nametag","wn_test"],transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],'
           'translation:[0f,0.35f,0f],scale:[1f,1f,1f]}}')
+CRAFTER = ('setblock 2 -60 2 minecraft:crafter[orientation=up_east]{Items:['
+           '{Slot:0b,id:"minecraft:ender_pearl",count:1},{Slot:1b,id:"minecraft:blaze_powder",count:1}]} replace')
 cmds = [
     'forceload add 0 0',
     'whitelist add Notch Mr Notch',
@@ -27,9 +29,19 @@ cmds = [
     'whitelist add jeb_ Notch',
     'whitelist add jeb_ Jebby',
     'eyerecipe',
+    # A crafter uses the same recipe lookup as a crafting table: power it and see if it crafts.
     'eyerecipe disable',
-    'eyerecipe',
+    CRAFTER,
+    'setblock 2 -60 3 minecraft:redstone_block',
+    'SLEEP',
+    'data get block 2 -60 2 Items',
+    'setblock 2 -60 3 minecraft:air',
     'eyerecipe enable',
+    CRAFTER,
+    'setblock 2 -60 3 minecraft:redstone_block',
+    'SLEEP',
+    'data get block 2 -60 2 Items',
+    'setblock 2 -60 3 minecraft:air',
     'team list',
     'team add wn_test',
     'team modify wn_test nametagVisibility never',
@@ -48,6 +60,9 @@ cmds = [
 s = socket.create_connection(('127.0.0.1', 25575), timeout=20)
 send(s, 1, 3, 'test'); print('auth:', recv(s))
 for i, c in enumerate(cmds):
+    if c == 'SLEEP':
+        time.sleep(2)
+        continue
     send(s, 10 + i, 2, c)
     print('>', c, flush=True)
     try:
