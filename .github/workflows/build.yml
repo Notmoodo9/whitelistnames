@@ -57,16 +57,23 @@ jobs:
           echo "JAR=$JAR"
           CP="$JAR"
           jp() { echo "===== $*"; javap -cp "$CP" "$@" 2>&1; }
-          jp -c -p net.minecraft.world.entity.Entity | awk '/startRiding\(/{p=1} p{print} /^$/{p=0}' | head -120
-          jp -p net.minecraft.world.entity.Entity | grep -iE 'tag|riding|passenger|getUUID|discard'
-          jp -c -p net.minecraft.server.commands.RideCommand | grep -iE 'player|canSerialize|ldc' | head -30
-          jp -p net.minecraft.commands.CommandSourceStack | grep -iE 'player|names'
-          jp -c -p net.minecraft.commands.arguments.selector.EntitySelectorParser | awk '/parseNameOrUUID/{p=1} p{print} /^$/{p=0}' | head -40
-          jp -c -p net.minecraft.commands.arguments.selector.EntitySelector | grep -iE 'getPlayerByName|playerName' | head
-          jp -c -p net.minecraft.world.entity.player.Player | awk '/getDisplayName\(\)/{p=1} p{print} /^$/{p=0}' | head -40
-          jp -p net.minecraft.server.level.ServerPlayer | grep -iE 'tablist|level\(\)|getPlayer|teleport'
-          jp -c -p 'net.minecraft.world.entity.Display$TextDisplay' | grep -E 'ldc|String ' | head -40
-          jp -c -p 'net.minecraft.world.entity.Display' | grep -E 'ldc +#[0-9]+ +// String' | head -60
-          jp -p net.minecraft.server.players.PlayerList | grep -iE 'byname|getPlayer\('
-          jp -p net.minecraft.server.level.ServerLevel | grep -iE 'getEntity\(|getAllEntities'
-          jp -c -p net.minecraft.server.level.ServerPlayer | grep -iE 'ejectPassengers|stopRiding' | head
+          for c in 'net.minecraft.world.entity.Display' 'net.minecraft.world.entity.Display$BillboardConstraints'; do jp -c -p "$c" | grep -E '// String' | sort -u | head -80; done
+          jp -c -p net.minecraft.world.entity.Entity | grep -E '// String (Tags|UUID)' | sort -u
+          jp -c -p net.minecraft.server.players.PlayerList | awk '/getPlayer\(java.lang.String\)|getPlayerByName\(/{p=1} p{print} /^$/{p=0}' | head -60
+          jp -c -p net.minecraft.world.entity.player.Player | grep -n 'getName' | head
+          jp -p net.minecraft.world.level.Level | grep -E 'getEntity\('
+          jp -p net.minecraft.world.level.EntityGetter | grep -E 'getEntity\('
+
+      - name: TEMP smoke test on a real server
+        run: |
+          mkdir -p run
+          echo eula=true > run/eula.txt
+          printf 'enable-rcon=true\nrcon.password=test\nrcon.port=25575\nonline-mode=false\nlevel-type=minecraft\\:flat\ngenerate-structures=false\nspawn-protection=0\n' > run/server.properties
+          ./gradlew runServer --console=plain > server.log 2>&1 &
+          for i in $(seq 120); do grep -q 'Done (' server.log && break; grep -qE 'BUILD FAILED|Crash' server.log && break; sleep 5; done
+          python3 .github/smoke/rcon.py || true
+          sleep 3
+          echo '===== server log (filtered)'
+          grep -nE 'whitelistnames|Whitelist|[Mm]ixin|ERROR|Exception|WARN|Done \(' server.log | head -80
+          echo '===== last lines'
+          tail -30 server.log

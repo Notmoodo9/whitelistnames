@@ -13,8 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(Entity.class)
 public abstract class EntityMixin {
 	@ModifyExpressionValue(method = "startRiding",
-			at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/EntityType;canSerialize()Z"),
-			require = 0)
+			at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/EntityType;canSerialize()Z"))
 	private boolean whitelistnames$allowNametagOnPlayer(boolean canSerialize) {
 		return canSerialize || NameTags.isNametag((Entity) (Object) this);
 	}

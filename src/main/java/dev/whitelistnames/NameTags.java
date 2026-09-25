@@ -68,10 +68,10 @@ public final class NameTags {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			String nick = NickStore.getNick(player.getUUID());
 			boolean want = nick != null && shouldShow(player);
-			boolean has = hasTag(player);
-			if (want && !has) {
+			if (want && !hasTag(player)) {
 				spawnTag(server, player, nick);
-			} else if (!want && has) {
+			} else if (!want && DISPLAYS.containsKey(player.getUUID())) {
+				// Dead, spectating or invisible: remove the tag (it may already have been dismounted).
 				removeTag(server, player.getUUID());
 			}
 		}
@@ -133,6 +133,18 @@ public final class NameTags {
 		if (WARNED.add(player.getUUID())) {
 			WhitelistNames.LOGGER.warn("Could not show nametag for {}: {}", player.getName().getString(), reason);
 		}
+	}
+
+	public static void onDisconnect(MinecraftServer server, ServerPlayer player) {
+		removeTag(server, player.getUUID());
+		WARNED.remove(player.getUUID());
+	}
+
+	/** Removes every nametag so none get saved into the world when the server stops. */
+	public static void removeAll(MinecraftServer server) {
+		DISPLAYS.clear();
+		NAMETAG_IDS.clear();
+		run(server, "kill @e[type=minecraft:text_display,tag=" + COMMON_TAG + "]");
 	}
 
 	public static void removeTag(MinecraftServer server, UUID id) {

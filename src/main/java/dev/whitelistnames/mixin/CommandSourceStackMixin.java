@@ -16,12 +16,13 @@ import java.util.List;
 /** Adds online players' nicknames to player-name tab completion. */
 @Mixin(CommandSourceStack.class)
 public abstract class CommandSourceStackMixin {
-	@Inject(method = "getOnlinePlayerNames", at = @At("RETURN"), cancellable = true, require = 0)
+	@Inject(method = "getOnlinePlayerNames", at = @At("RETURN"), cancellable = true)
 	private void whitelistnames$suggestNicknames(CallbackInfoReturnable<Collection<String>> cir) {
 		List<String> names = new ArrayList<>(cir.getReturnValue());
 		for (ServerPlayer player : ((CommandSourceStack) (Object) this).getServer().getPlayerList().getPlayers()) {
 			String nick = NickStore.getNick(player.getUUID());
-			if (nick != null) {
+			// Vanilla player arguments only accept names up to 16 characters.
+			if (nick != null && nick.length() <= NickCommands.SELECTOR_MAX_LENGTH) {
 				String option = NickCommands.quoteIfNeeded(nick);
 				if (!names.contains(option)) names.add(option);
 			}

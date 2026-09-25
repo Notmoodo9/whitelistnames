@@ -6,8 +6,10 @@ import com.google.gson.JsonParser;
 
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,9 +29,13 @@ public final class NickStore {
 		try (Reader reader = Files.newBufferedReader(path)) {
 			JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
 			for (var e : root.entrySet()) {
-				JsonObject o = e.getValue().getAsJsonObject();
-				ENTRIES.put(UUID.fromString(e.getKey()),
-						new Entry(o.get("username").getAsString(), o.get("nickname").getAsString()));
+				try {
+					JsonObject o = e.getValue().getAsJsonObject();
+					ENTRIES.put(UUID.fromString(e.getKey()),
+							new Entry(o.get("username").getAsString(), o.get("nickname").getAsString()));
+				} catch (Exception ex) {
+					WhitelistNames.LOGGER.warn("Skipping bad entry {} in {}", e.getKey(), path);
+				}
 			}
 			WhitelistNames.LOGGER.info("Loaded {} nicknames", ENTRIES.size());
 		} catch (Exception ex) {
@@ -37,7 +43,7 @@ public final class NickStore {
 		}
 	}
 
-	private static void save() {
+	private static synchronized void save() {
 		JsonObject root = new JsonObject();
 		ENTRIES.forEach((id, entry) -> {
 			JsonObject o = new JsonObject();
@@ -47,8 +53,15 @@ public final class NickStore {
 		});
 		try {
 			Files.createDirectories(file.getParent());
-			try (Writer writer = Files.newBufferedWriter(file)) {
+			// Write to a temp file first so a crash mid-save can't wipe the names.
+			Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
+			try (Writer writer = Files.newBufferedWriter(tmp)) {
 				new GsonBuilder().setPrettyPrinting().create().toJson(root, writer);
+			}
+			try {
+				Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (AtomicMoveNotSupportedException ex) {
+				Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
 			}
 		} catch (Exception ex) {
 			WhitelistNames.LOGGER.error("Could not save {}", file, ex);
@@ -95,5 +108,9 @@ public final class NickStore {
 
 	public static Iterable<Entry> all() {
 		return ENTRIES.values();
+	}
+
+	public static Iterable<Map.Entry<UUID, Entry>> entries() {
+		return ENTRIES.entrySet();
 	}
 }

@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Shows the nickname in the tab list too. */
 @Mixin(ServerPlayer.class)
 public abstract class ServerPlayerMixin {
-	@Inject(method = "getTabListDisplayName", at = @At("HEAD"), cancellable = true, require = 0)
+	@Inject(method = "getTabListDisplayName", at = @At("HEAD"), cancellable = true)
 	private void whitelistnames$tabNickname(CallbackInfoReturnable<Component> cir) {
 		String nick = NickStore.getNick(((ServerPlayer) (Object) this).getUUID());
 		if (nick != null) cir.setReturnValue(Component.literal(nick));
