@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "com.whitelistnames.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "PlayerMixin",
+    "ServerPlayerMixin",
+    "PlayerListMixin",
+    "DisplayAccessor",
+    "TextDisplayAccessor"
+  ],
+  "injectors": { "defaultRequire": 1 }
+}
