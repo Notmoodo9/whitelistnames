@@ -94,8 +94,16 @@ public final class NameTags {
 				+ "Tags:[\"" + COMMON_TAG + "\",\"" + tag + "\"],"
 				+ "transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],"
 				+ "translation:[0f,0.35f,0f],scale:[1f,1f,1f]}}");
-		run(server, "execute at " + uuid + " run ride @e[type=minecraft:text_display,tag="
-				+ tag + ",sort=nearest,limit=1] mount " + uuid);
+
+		// Vanilla /ride refuses to mount anything on a player, so mount it directly.
+		List<Entity> summoned = player.level().getEntities((Entity) null, player.getBoundingBox().inflate(2),
+				e -> !e.isRemoved() && e.getVehicle() == null && e.getTags().contains(tag));
+		for (Entity display : summoned) {
+			if (!display.startRiding(player)) {
+				WhitelistNames.LOGGER.warn("Could not attach nametag to {}", player.getName().getString());
+				display.discard();
+			}
+		}
 	}
 
 	public static void removeTag(MinecraftServer server, UUID id) {
