@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,6 +21,10 @@ public final class NameTags {
 	private static final String ORPHAN_TAG = "wn_orphan";
 	/** Player UUID -> UUID of the text display riding them. */
 	private static final Map<UUID, UUID> DISPLAYS = new ConcurrentHashMap<>();
+	/** Display entities we're allowed to mount on players (see EntityMixin). */
+	private static final Set<UUID> NAMETAG_IDS = ConcurrentHashMap.newKeySet();
+	/** Players we've already logged a nametag failure for, so the log isn't spammed every second. */
+	private static final Set<UUID> WARNED = ConcurrentHashMap.newKeySet();
 	private static int ticks;
 
 	private NameTags() {}
@@ -105,17 +110,34 @@ public final class NameTags {
 
 		// Vanilla /ride refuses to mount anything on a player, so mount it directly.
 		Entity display = ((ServerLevel) player.level()).getEntity(displayId);
-		if (display == null) return;
+		if (display == null) {
+			warnOnce(player, "the text_display could not be summoned");
+			return;
+		}
+		NAMETAG_IDS.add(displayId);
 		if (display.startRiding(player)) {
 			DISPLAYS.put(player.getUUID(), displayId);
 		} else {
-			WhitelistNames.LOGGER.warn("Could not attach nametag to {}", player.getName().getString());
+			NAMETAG_IDS.remove(displayId);
 			display.discard();
+			warnOnce(player, "the text_display could not ride the player");
+		}
+	}
+
+	/** True for our nametag displays; lets them ride players, which vanilla normally refuses. */
+	public static boolean isNametag(Entity entity) {
+		return NAMETAG_IDS.contains(entity.getUUID());
+	}
+
+	private static void warnOnce(ServerPlayer player, String reason) {
+		if (WARNED.add(player.getUUID())) {
+			WhitelistNames.LOGGER.warn("Could not show nametag for {}: {}", player.getName().getString(), reason);
 		}
 	}
 
 	public static void removeTag(MinecraftServer server, UUID id) {
-		DISPLAYS.remove(id);
+		UUID displayId = DISPLAYS.remove(id);
+		if (displayId != null) NAMETAG_IDS.remove(displayId);
 		run(server, "kill @e[type=minecraft:text_display,tag=" + tagFor(id) + "]");
 	}
 

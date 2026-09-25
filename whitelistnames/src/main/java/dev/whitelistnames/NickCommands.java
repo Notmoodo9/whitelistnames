@@ -132,7 +132,7 @@ public final class NickCommands {
 		return SharedSuggestionProvider.suggest(options, builder);
 	}
 
-	private static String quoteIfNeeded(String s) {
+	static String quoteIfNeeded(String s) {
 		for (char c : s.toCharArray()) {
 			if (!StringReader.isAllowedInUnquotedString(c)) {
 				return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";

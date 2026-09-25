@@ -85,6 +85,14 @@ public final class NickStore {
 		return null;
 	}
 
+	/** The UUID of whoever currently has this nickname (case-insensitive), or null. */
+	public static UUID findByNick(String nick) {
+		for (var e : ENTRIES.entrySet()) {
+			if (e.getValue().nickname().equalsIgnoreCase(nick)) return e.getKey();
+		}
+		return null;
+	}
+
 	public static Iterable<Entry> all() {
 		return ENTRIES.values();
 	}
