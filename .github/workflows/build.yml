@@ -50,7 +50,8 @@ jobs:
           gh release create "$GITHUB_REF_NAME" "${{ steps.jar.outputs.path }}" \
             --title "Whitelist Names $GITHUB_REF_NAME" --generate-notes
 
-      - name: TEMP smoke test on a real server
+      # Starts a real server with the mod and runs the mod's commands over RCON.
+      - name: Smoke test on a real server
         timeout-minutes: 15
         run: |
           mkdir -p run

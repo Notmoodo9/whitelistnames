@@ -13,9 +13,11 @@ messages, the tab list and above their head.
 
 Anywhere a command takes an online player (`/tp`, `/msg`, `/give`, `/kill`, ...) you can use either
 their username or their nickname, e.g. `/tp Steve` or `/tp "Mr Notch"`. Nicknames also show up in tab-complete.
+Vanilla only accepts names up to 16 characters there, so longer nicknames only work in `/changename`.
 Commands that take offline profiles (`/whitelist`, `/op`, `/ban`) still need the real username.
 
 Names are trimmed, `§` and control characters are stripped, and they can be at most 32 characters.
+A name can't be the same as another player's nickname or username.
 They're saved in `config/whitelistnames.json`.
 
 ## Known limitations

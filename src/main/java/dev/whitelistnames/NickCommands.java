@@ -169,13 +169,17 @@ public final class NickCommands {
 		return s;
 	}
 
-	/** Trims, strips formatting/control characters, enforces max length. Returns null if invalid. */
+	/** Trims, strips formatting/control characters and surrounding quotes, enforces max length. Returns null if invalid. */
 	private static String clean(String raw) {
 		StringBuilder sb = new StringBuilder();
 		for (char c : raw.toCharArray()) {
 			if (c != '§' && !Character.isISOControl(c)) sb.append(c);
 		}
 		String s = sb.toString().strip();
+		// The new name takes the rest of the line, so "Mr Notch" would otherwise keep its quotes.
+		if (s.length() >= 2 && s.startsWith("\"") && s.endsWith("\"")) {
+			s = s.substring(1, s.length() - 1).strip();
+		}
 		return (s.isEmpty() || s.length() > MAX_LENGTH) ? null : s;
 	}
 }

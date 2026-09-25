@@ -1,4 +1,5 @@
-import socket, struct, sys, time
+"""Smoke test: sends the mod's commands to a running server over RCON and prints the replies."""
+import socket, struct, time
 
 def send(s, i, t, body):
     data = struct.pack('<ii', i, t) + body.encode() + b'\0\0'
@@ -23,7 +24,8 @@ cmds = [
     'changename Notch Mr_N',
     'changename Mr_N "Mr N 2"',
     'changename "Mr N 2" Notch',
-    'whitelist add jeb_ Mr N 2',
+    'whitelist add jeb_ Notch',
+    'whitelist add jeb_ Jebby',
     'team list',
     'team add wn_test',
     'team modify wn_test nametagVisibility never',
