@@ -7,7 +7,9 @@
     "ServerPlayerMixin",
     "EntityAccessor",
     "PlayerListMixin",
-    "CommandSourceStackMixin"
+    "CommandSourceStackMixin",
+    "RecipeManagerMixin",
+    "RecipeCacheMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }

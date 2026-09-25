@@ -10,6 +10,9 @@ messages, the tab list and above their head.
 - `/whitelist add <username>` - normal vanilla behavior
 - `/changename <username or current name> <new name>` - put a current name with spaces in "quotes".
   Same permission as `/whitelist` (or `/gamemode` in singleplayer/LAN).
+- `/eyerecipe disable` / `/eyerecipe enable` - turns the Eye of Ender crafting recipe off or on (ops only).
+  `/eyerecipe` on its own shows whether it's on. Applies to crafting tables, the inventory grid and crafters,
+  and is saved in `config/whitelistnames-settings.json` so it stays that way after a restart.
 
 Anywhere a command takes an online player (`/tp`, `/msg`, `/give`, `/kill`, ...) you can use either
 their username or their nickname, e.g. `/tp Steve` or `/tp "Mr Notch"`. Nicknames also show up in tab-complete.
