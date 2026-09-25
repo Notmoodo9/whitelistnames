@@ -24,6 +24,8 @@ import java.util.function.Predicate;
 
 public final class NickCommands {
 	public static final int MAX_LENGTH = 32;
+	/** Longest name vanilla player arguments (/tp, /msg, ...) accept. */
+	public static final int SELECTOR_MAX_LENGTH = 16;
 
 	private NickCommands() {}
 
@@ -68,6 +70,10 @@ public final class NickCommands {
 		for (var profile : GameProfileArgument.getGameProfiles(ctx, "targets")) {
 			String username = profile.name();
 			UUID id = profile.id();
+			if (isTaken(server, nick, id)) {
+				source.sendFailure(Component.literal("\"" + nick + "\" is already someone else's name or username."));
+				continue;
+			}
 
 			// Let vanilla do the actual whitelisting (and print its usual message)
 			server.getCommands().performPrefixedCommand(source, "whitelist add " + username);
@@ -108,6 +114,11 @@ public final class NickCommands {
 			username = player.getName().getString();
 		}
 
+		if (isTaken(server, nick, id)) {
+			source.sendFailure(Component.literal("\"" + nick + "\" is already someone else's name or username."));
+			return 0;
+		}
+
 		String old = NickStore.getNick(id);
 		NickStore.set(id, username, nick);
 		ServerPlayer online = server.getPlayerList().getPlayer(id);
@@ -132,7 +143,24 @@ public final class NickCommands {
 		return SharedSuggestionProvider.suggest(options, builder);
 	}
 
-	private static String quoteIfNeeded(String s) {
+	/**
+	 * True if another player already uses this as a nickname or username, which would make
+	 * "username or nickname" lookups ambiguous.
+	 */
+	private static boolean isTaken(MinecraftServer server, String nick, UUID self) {
+		for (var e : NickStore.entries()) {
+			if (e.getKey().equals(self)) continue;
+			if (e.getValue().nickname().equalsIgnoreCase(nick) || e.getValue().username().equalsIgnoreCase(nick)) {
+				return true;
+			}
+		}
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			if (!p.getUUID().equals(self) && p.getName().getString().equalsIgnoreCase(nick)) return true;
+		}
+		return false;
+	}
+
+	public static String quoteIfNeeded(String s) {
 		for (char c : s.toCharArray()) {
 			if (!StringReader.isAllowedInUnquotedString(c)) {
 				return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
@@ -141,13 +169,17 @@ public final class NickCommands {
 		return s;
 	}
 
-	/** Trims, strips formatting/control characters, enforces max length. Returns null if invalid. */
+	/** Trims, strips formatting/control characters and surrounding quotes, enforces max length. Returns null if invalid. */
 	private static String clean(String raw) {
 		StringBuilder sb = new StringBuilder();
 		for (char c : raw.toCharArray()) {
 			if (c != '§' && !Character.isISOControl(c)) sb.append(c);
 		}
 		String s = sb.toString().strip();
+		// The new name takes the rest of the line, so "Mr Notch" would otherwise keep its quotes.
+		if (s.length() >= 2 && s.startsWith("\"") && s.endsWith("\"")) {
+			s = s.substring(1, s.length() - 1).strip();
+		}
 		return (s.isEmpty() || s.length() > MAX_LENGTH) ? null : s;
 	}
 }

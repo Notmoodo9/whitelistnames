@@ -1,5 +1,6 @@
 package dev.whitelistnames;
 
+import dev.whitelistnames.mixin.EntityAccessor;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -7,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,6 +22,8 @@ public final class NameTags {
 	private static final String ORPHAN_TAG = "wn_orphan";
 	/** Player UUID -> UUID of the text display riding them. */
 	private static final Map<UUID, UUID> DISPLAYS = new ConcurrentHashMap<>();
+	/** Players we've already logged a nametag failure for, so the log isn't spammed every second. */
+	private static final Set<UUID> WARNED = ConcurrentHashMap.newKeySet();
 	private static int ticks;
 
 	private NameTags() {}
@@ -63,10 +67,10 @@ public final class NameTags {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			String nick = NickStore.getNick(player.getUUID());
 			boolean want = nick != null && shouldShow(player);
-			boolean has = hasTag(player);
-			if (want && !has) {
+			if (want && !hasTag(player)) {
 				spawnTag(server, player, nick);
-			} else if (!want && has) {
+			} else if (!want && DISPLAYS.containsKey(player.getUUID())) {
+				// Dead, spectating or invisible: remove the tag (it may already have been dismounted).
 				removeTag(server, player.getUUID());
 			}
 		}
@@ -103,15 +107,43 @@ public final class NameTags {
 				+ "transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],"
 				+ "translation:[0f,0.35f,0f],scale:[1f,1f,1f]}}");
 
-		// Vanilla /ride refuses to mount anything on a player, so mount it directly.
+		// Vanilla /ride refuses to mount anything on a player, so mount it in code.
 		Entity display = ((ServerLevel) player.level()).getEntity(displayId);
-		if (display == null) return;
-		if (display.startRiding(player)) {
+		if (display == null) {
+			warnOnce(player, "the text_display could not be summoned");
+			return;
+		}
+		if (mount(display, player)) {
 			DISPLAYS.put(player.getUUID(), displayId);
 		} else {
-			WhitelistNames.LOGGER.warn("Could not attach nametag to {}", player.getName().getString());
 			display.discard();
+			warnOnce(player, "the text_display could not ride the player");
 		}
+	}
+
+	/** Same as display.startRiding(player), minus vanilla's refusal to mount things on players. */
+	private static boolean mount(Entity display, ServerPlayer player) {
+		if (display.isPassenger()) display.stopRiding();
+		((EntityAccessor) display).whitelistnames$setVehicle(player);
+		((EntityAccessor) player).whitelistnames$addPassenger(display);
+		return player.getPassengers().contains(display);
+	}
+
+	private static void warnOnce(ServerPlayer player, String reason) {
+		if (WARNED.add(player.getUUID())) {
+			WhitelistNames.LOGGER.warn("Could not show nametag for {}: {}", player.getName().getString(), reason);
+		}
+	}
+
+	public static void onDisconnect(MinecraftServer server, ServerPlayer player) {
+		removeTag(server, player.getUUID());
+		WARNED.remove(player.getUUID());
+	}
+
+	/** Removes every nametag so none get saved into the world when the server stops. */
+	public static void removeAll(MinecraftServer server) {
+		DISPLAYS.clear();
+		run(server, "kill @e[type=minecraft:text_display,tag=" + COMMON_TAG + "]");
 	}
 
 	public static void removeTag(MinecraftServer server, UUID id) {

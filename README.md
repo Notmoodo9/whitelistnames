@@ -11,7 +11,13 @@ messages, the tab list and above their head.
 - `/changename <username or current name> <new name>` - put a current name with spaces in "quotes".
   Same permission as `/whitelist` (or `/gamemode` in singleplayer/LAN).
 
+Anywhere a command takes an online player (`/tp`, `/msg`, `/give`, `/kill`, ...) you can use either
+their username or their nickname, e.g. `/tp Steve` or `/tp "Mr Notch"`. Nicknames also show up in tab-complete.
+Vanilla only accepts names up to 16 characters there, so longer nicknames only work in `/changename`.
+Commands that take offline profiles (`/whitelist`, `/op`, `/ban`) still need the real username.
+
 Names are trimmed, `§` and control characters are stripped, and they can be at most 32 characters.
+A name can't be the same as another player's nickname or username.
 They're saved in `config/whitelistnames.json`.
 
 ## Known limitations
@@ -24,4 +30,7 @@ They're saved in `config/whitelistnames.json`.
 Needs JDK 25. Run `./gradlew build`; the mod is `build/libs/whitelistnames-1.0.0.jar`
 (not the `-sources` one). Put it plus Fabric API in the server's `mods` folder.
 
-GitHub Actions (`.github/workflows/build.yml`) builds on every push and uploads the jar as an artifact.
+## Downloading the jar
+- **Latest build:** the "Latest build" release on the repo's Releases page, updated on every push to `main`.
+- **Versioned release:** push a tag, e.g. `git tag v1.0.0 && git push origin v1.0.0`, and a release with the jar is created.
+- **Any branch/PR:** each workflow run in the Actions tab has the jar as a zipped artifact.
