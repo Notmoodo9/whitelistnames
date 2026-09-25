@@ -39,10 +39,13 @@ cmds = [
     'data get entity ' + UUID,
     'kill @e[type=minecraft:text_display,tag=wn_test]',
 ]
-s = socket.create_connection(('127.0.0.1', 25575))
+s = socket.create_connection(('127.0.0.1', 25575), timeout=20)
 send(s, 1, 3, 'test'); print('auth:', recv(s))
 for i, c in enumerate(cmds):
     send(s, 10 + i, 2, c)
-    print('>', c)
-    print('<', recv(s))
+    print('>', c, flush=True)
+    try:
+        print('<', recv(s), flush=True)
+    except Exception as ex:
+        print('<! no reply:', ex, flush=True)
     time.sleep(0.3)
