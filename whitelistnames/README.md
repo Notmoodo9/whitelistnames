@@ -11,6 +11,10 @@ messages, the tab list and above their head.
 - `/changename <username or current name> <new name>` - put a current name with spaces in "quotes".
   Same permission as `/whitelist` (or `/gamemode` in singleplayer/LAN).
 
+Anywhere a command takes an online player (`/tp`, `/msg`, `/give`, `/kill`, ...) you can use either
+their username or their nickname, e.g. `/tp Steve` or `/tp "Mr Notch"`. Nicknames also show up in tab-complete.
+Commands that take offline profiles (`/whitelist`, `/op`, `/ban`) still need the real username.
+
 Names are trimmed, `§` and control characters are stripped, and they can be at most 32 characters.
 They're saved in `config/whitelistnames.json`.
 
