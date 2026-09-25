@@ -2,6 +2,7 @@ package dev.whitelistnames;
 
 import dev.whitelistnames.mixin.EntityAccessor;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -22,6 +23,10 @@ public final class NameTags {
 	private static final String ORPHAN_TAG = "wn_orphan";
 	/** Player UUID -> UUID of the text display riding them. */
 	private static final Map<UUID, UUID> DISPLAYS = new ConcurrentHashMap<>();
+	/** UUIDs of all our nametag displays (see EntityMixin). */
+	private static final Set<UUID> NAMETAG_IDS = ConcurrentHashMap.newKeySet();
+	/** Players whose nametag was just spawned and needs its riding info sent next tick. */
+	private static final Set<UUID> NEEDS_SYNC = ConcurrentHashMap.newKeySet();
 	/** Players we've already logged a nametag failure for, so the log isn't spammed every second. */
 	private static final Set<UUID> WARNED = ConcurrentHashMap.newKeySet();
 	private static int ticks;
@@ -62,6 +67,16 @@ public final class NameTags {
 
 	public static void tick(MinecraftServer server) {
 		ticks++;
+
+		// Clients only learn a nametag rides its player from a "passengers" packet, which vanilla doesn't
+		// send when a client first sees the nametag. Re-send it so everyone attaches it to the player.
+		if (ticks % 10 == 0) {
+			for (UUID id : DISPLAYS.keySet()) syncPassengers(server, id);
+		} else if (!NEEDS_SYNC.isEmpty()) {
+			for (UUID id : NEEDS_SYNC) syncPassengers(server, id);
+		}
+		NEEDS_SYNC.clear();
+
 		if (ticks % 20 != 0) return; // once per second
 
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -113,11 +128,29 @@ public final class NameTags {
 			warnOnce(player, "the text_display could not be summoned");
 			return;
 		}
+		NAMETAG_IDS.add(displayId);
 		if (mount(display, player)) {
 			DISPLAYS.put(player.getUUID(), displayId);
+			NEEDS_SYNC.add(player.getUUID());
 		} else {
+			NAMETAG_IDS.remove(displayId);
 			display.discard();
 			warnOnce(player, "the text_display could not ride the player");
+		}
+	}
+
+	/** True for our nametag display entities. */
+	public static boolean isNametag(Entity entity) {
+		return NAMETAG_IDS.contains(entity.getUUID());
+	}
+
+	/** Tells everyone near the player (except the player, who never sees their own tag) what rides them. */
+	private static void syncPassengers(MinecraftServer server, UUID playerId) {
+		ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+		if (player == null || player.getPassengers().isEmpty()) return;
+		ClientboundSetPassengersPacket packet = new ClientboundSetPassengersPacket(player);
+		for (ServerPlayer viewer : player.level().players()) {
+			if (viewer != player) viewer.connection.send(packet);
 		}
 	}
 
@@ -143,11 +176,13 @@ public final class NameTags {
 	/** Removes every nametag so none get saved into the world when the server stops. */
 	public static void removeAll(MinecraftServer server) {
 		DISPLAYS.clear();
+		NAMETAG_IDS.clear();
 		run(server, "kill @e[type=minecraft:text_display,tag=" + COMMON_TAG + "]");
 	}
 
 	public static void removeTag(MinecraftServer server, UUID id) {
-		DISPLAYS.remove(id);
+		UUID displayId = DISPLAYS.remove(id);
+		if (displayId != null) NAMETAG_IDS.remove(displayId);
 		run(server, "kill @e[type=minecraft:text_display,tag=" + tagFor(id) + "]");
 	}
 

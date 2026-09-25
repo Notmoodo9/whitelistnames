@@ -6,6 +6,7 @@
     "PlayerMixin",
     "ServerPlayerMixin",
     "EntityAccessor",
+    "EntityMixin",
     "PlayerListMixin",
     "CommandSourceStackMixin",
     "RecipeManagerMixin",

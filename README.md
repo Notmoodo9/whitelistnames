@@ -26,7 +26,6 @@ They're saved in `config/whitelistnames.json`.
 ## Known limitations
 - Nicknamed players are put on the scoreboard team `wn_nicknamed` (to hide the vanilla nametag),
   so this conflicts with other team usage.
-- Players see their own floating name in third person.
 - The floating name doesn't dim when sneaking like the vanilla nametag does.
 
 ## Building
