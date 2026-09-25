@@ -16,9 +16,12 @@ public class WhitelistNames implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		NickStore.load(FabricLoader.getInstance().getConfigDir().resolve("whitelistnames.json"));
+		Settings.load(FabricLoader.getInstance().getConfigDir().resolve("whitelistnames-settings.json"));
 
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-				NickCommands.register(dispatcher));
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+			NickCommands.register(dispatcher);
+			RecipeCommands.register(dispatcher);
+		});
 
 		ServerLifecycleEvents.SERVER_STARTED.register(NameTags::setupTeam);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->

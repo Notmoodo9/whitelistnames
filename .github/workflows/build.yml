@@ -19,6 +19,19 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v4
+      - name: TEMP inspect recipe API
+        continue-on-error: true
+        run: |
+          set +e
+          ./gradlew -q help > /dev/null
+          JAR=$(find ~/.gradle -name 'minecraft-merged-deobf-26.2.jar' | head -1)
+          jp() { echo "===== $*"; javap -cp "$JAR" "$@" 2>&1; }
+          jp -p net.minecraft.world.item.crafting.RecipeManager | grep -E 'getRecipeFor|byKey'
+          jp -p net.minecraft.world.item.crafting.RecipeHolder
+          jp -p net.minecraft.resources.ResourceKey | grep -E 'public'
+          jp -c -p net.minecraft.world.inventory.CraftingMenu | grep -E 'getRecipeFor'
+          jp -c -p net.minecraft.world.level.block.CrafterBlock | grep -E 'getRecipeFor'
+          true
       - name: Build
         run: ./gradlew build --stacktrace
       - name: Find jar
