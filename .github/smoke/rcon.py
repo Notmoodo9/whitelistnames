@@ -31,6 +31,7 @@ cmds = [
     'eyerecipe',
     # A crafter uses the recipe lookup too: power it and see if an Eye of Ender pops out.
     'eyerecipe disable',
+    'setblock 2 -60 2 minecraft:air',
     CRAFTER,
     'data get block 2 -60 2 Items',
     'setblock 2 -60 3 minecraft:redstone_block',
@@ -40,6 +41,7 @@ cmds = [
     'setblock 2 -60 3 minecraft:air',
     'kill @e[type=minecraft:item]',
     'eyerecipe enable',
+    'setblock 2 -60 2 minecraft:air',
     CRAFTER,
     'setblock 2 -60 3 minecraft:redstone_block',
     'SLEEP',
@@ -49,6 +51,7 @@ cmds = [
     'kill @e[type=minecraft:item]',
     # Disabling again must also beat the crafter's recipe cache, which now holds the recipe.
     'eyerecipe disable',
+    'setblock 2 -60 2 minecraft:air',
     CRAFTER,
     'setblock 2 -60 3 minecraft:redstone_block',
     'SLEEP',

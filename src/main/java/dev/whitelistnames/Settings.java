@@ -15,6 +15,8 @@ import java.util.Optional;
 public final class Settings {
 	private static Path file;
 	private static volatile boolean eyeOfEnderRecipeDisabled;
+	/** Bumped on every recipe toggle so caches know to refresh. */
+	private static volatile int recipeGeneration;
 
 	private Settings() {}
 
@@ -56,8 +58,13 @@ public final class Settings {
 				&& holder.id().identifier().toString().equals("minecraft:ender_eye");
 	}
 
+	public static int recipeGeneration() {
+		return recipeGeneration;
+	}
+
 	public static void setEyeOfEnderRecipeDisabled(boolean disabled) {
 		eyeOfEnderRecipeDisabled = disabled;
+		recipeGeneration++;
 		save();
 	}
 }
