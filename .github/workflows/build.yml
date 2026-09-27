@@ -19,6 +19,33 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
+      - name: TEMP inspect player info
+        continue-on-error: true
+        run: |
+          set +e
+          ./gradlew -q help > /dev/null
+          JAR=$(find ~/.gradle -name 'minecraft-merged-deobf-26.2.jar' | head -1)
+          AUTH=$(find ~/.gradle -name 'authlib-*.jar' | grep -v sources | head -1)
+          echo "AUTH=$AUTH"
+          jp() { echo "===== $*"; javap -cp "$JAR:$AUTH" "$@" 2>&1; }
+          jp -p net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket
+          jp -p 'net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket$Entry'
+          jp -p 'net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket$Action' | head -20
+          jp -c -p 'net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket$Action' | grep -E 'GameProfile|writeUtf|name\(\)|PLAYER_NAME|StreamCodec' | head -20
+          jp -p com.mojang.authlib.GameProfile
+          jp -p net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket | grep public
+          jp -p net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket | grep public
+          jp -p net.minecraft.util.StringUtil | grep -iE 'player|valid'
+          jp -c -p net.minecraft.util.StringUtil | awk '/isValidPlayerName/{p=1} p{print} /^$/{p=0}' | head -30
+          jp -p net.minecraft.server.level.ServerChunkCache | grep -E 'chunkMap'
+          jp -p net.minecraft.server.level.ChunkMap | grep -E 'entityMap|TrackedEntity'
+          jp -p 'net.minecraft.server.level.ChunkMap$TrackedEntity'
+          jp -p net.minecraft.server.level.ServerEntity | grep -E 'Pairing'
+          jp -p net.minecraft.server.network.ServerCommonPacketListenerImpl | grep -E 'send|Profile|player'
+          jp -p net.minecraft.server.network.ServerGamePacketListenerImpl | grep -E ' player;|getPlayer'
+          jp -c -p net.minecraft.server.players.PlayerList | grep -E 'ClientboundPlayerInfoUpdatePacket|PlayerInfoRemove' | sort -u
+          jp -p net.minecraft.server.players.PlayerList | grep -E ' remove\('
+          true
       - name: Build
         run: ./gradlew build --stacktrace
       - name: Find jar
