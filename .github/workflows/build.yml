@@ -24,7 +24,7 @@ jobs:
       - name: Find jar
         id: jar
         run: echo "path=$(ls build/libs/*.jar | grep -v -- '-sources' | head -n1)" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: whitelistnames
           path: ${{ steps.jar.outputs.path }}
