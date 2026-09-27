@@ -1,5 +1,6 @@
 package dev.whitelistnames.mixin;
 
+import dev.whitelistnames.NameSync;
 import dev.whitelistnames.NickCommands;
 import dev.whitelistnames.NickStore;
 import net.minecraft.commands.CommandSourceStack;
@@ -21,8 +22,7 @@ public abstract class CommandSourceStackMixin {
 		List<String> names = new ArrayList<>(cir.getReturnValue());
 		for (ServerPlayer player : ((CommandSourceStack) (Object) this).getServer().getPlayerList().getPlayers()) {
 			String nick = NickStore.getNick(player.getUUID());
-			// Vanilla player arguments only accept names up to 16 characters.
-			if (nick != null && nick.length() <= NickCommands.SELECTOR_MAX_LENGTH) {
+			if (nick != null && NameSync.isValidNick(nick)) {
 				String option = NickCommands.quoteIfNeeded(nick);
 				if (!names.contains(option)) names.add(option);
 			}

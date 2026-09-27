@@ -73,6 +73,11 @@ public final class NickStore {
 		return e == null ? null : e.nickname();
 	}
 
+	public static String getUsername(UUID id) {
+		Entry e = ENTRIES.get(id);
+		return e == null ? null : e.username();
+	}
+
 	public static void set(UUID id, String username, String nickname) {
 		ENTRIES.put(id, new Entry(username, nickname));
 		save();

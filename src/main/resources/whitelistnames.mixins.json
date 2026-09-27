@@ -5,8 +5,10 @@
   "mixins": [
     "PlayerMixin",
     "ServerPlayerMixin",
-    "EntityAccessor",
-    "EntityMixin",
+    "ServerCommonPacketListenerImplMixin",
+    "PlayerInfoPacketAccessor",
+    "ChunkMapAccessor",
+    "TrackedEntityAccessor",
     "PlayerListMixin",
     "CommandSourceStackMixin",
     "RecipeManagerMixin",
