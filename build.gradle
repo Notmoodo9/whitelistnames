@@ -13,6 +13,13 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
+loom {
+	runs {
+		// ./gradlew runServer (used by CI): check all mixins apply at startup, see WhitelistNames.selfTest
+		server { vmArg "-Dwhitelistnames.selftest=true" }
+	}
+}
+
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": inputs.properties.version }

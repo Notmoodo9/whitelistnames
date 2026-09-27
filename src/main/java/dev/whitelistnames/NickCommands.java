@@ -13,19 +13,22 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 public final class NickCommands {
-	public static final int MAX_LENGTH = 32;
-	/** Longest name vanilla player arguments (/tp, /msg, ...) accept. */
-	public static final int SELECTOR_MAX_LENGTH = 16;
+	private static final String INVALID_NAME = "Nicknames must be 1-16 characters with no spaces or quotes "
+			+ "(like a Minecraft username), and can't start with @.";
 
 	private NickCommands() {}
 
@@ -55,6 +58,68 @@ public final class NickCommands {
 						.suggests(NickCommands::suggestNames)
 						.then(Commands.argument("newname", StringArgumentType.greedyString())
 								.executes(NickCommands::changeName))));
+
+		// /namecheck <nickname> - who is this really? (ops only)
+		dispatcher.register(Commands.literal("namecheck")
+				.requires(opOnly(dispatcher))
+				.then(Commands.argument("name", StringArgumentType.string())
+						.suggests(NickCommands::suggestNames)
+						.executes(NickCommands::nameCheck)));
+
+		// /nicks - everyone's nickname (ops only)
+		dispatcher.register(Commands.literal("nicks")
+				.requires(opOnly(dispatcher))
+				.executes(NickCommands::listNicks));
+	}
+
+	/** Ops only: same permission as vanilla /op (or /gamemode in singleplayer/LAN, where /op doesn't exist). */
+	public static Predicate<CommandSourceStack> opOnly(CommandDispatcher<CommandSourceStack> dispatcher) {
+		CommandNode<CommandSourceStack> node = dispatcher.getRoot().getChild("op");
+		if (node == null) node = dispatcher.getRoot().getChild("gamemode");
+		return node != null ? node.getRequirement() : s -> false;
+	}
+
+	private static int nameCheck(CommandContext<CommandSourceStack> ctx) {
+		CommandSourceStack source = ctx.getSource();
+		String query = StringArgumentType.getString(ctx, "name");
+		UUID byNick = NickStore.findByNick(query);
+		if (byNick != null) {
+			String username = NickStore.getUsername(byNick);
+			String nick = NickStore.getNick(byNick);
+			source.sendSuccess(() -> Component.literal(nick + " is " + username), false);
+			return 1;
+		}
+		var byUsername = NickStore.find(query);
+		if (byUsername != null) {
+			NickStore.Entry e = byUsername.getValue();
+			source.sendSuccess(() -> Component.literal(e.username() + " goes by " + e.nickname()), false);
+			return 1;
+		}
+		source.sendFailure(Component.literal("Nobody has the nickname or username \"" + query + "\"."));
+		return 0;
+	}
+
+	private static int listNicks(CommandContext<CommandSourceStack> ctx) {
+		CommandSourceStack source = ctx.getSource();
+		MinecraftServer server = source.getServer();
+		List<Map.Entry<UUID, NickStore.Entry>> all = new ArrayList<>();
+		for (var e : NickStore.entries()) all.add(e);
+		if (all.isEmpty()) {
+			source.sendSuccess(() -> Component.literal("Nobody has a nickname yet."), false);
+			return 0;
+		}
+		all.sort(Comparator.comparing(e -> e.getValue().nickname().toLowerCase(Locale.ROOT)));
+
+		MutableComponent list = Component.literal(all.size() + " nickname(s):");
+		for (var e : all) {
+			boolean online = server.getPlayerList().getPlayer(e.getKey()) != null;
+			String nick = e.getValue().nickname();
+			list.append(Component.literal("\n" + nick + " = " + e.getValue().username()
+					+ (online ? " (online)" : "")
+					+ (NameSync.isValidNick(nick) ? "" : " [not shown above head, rename to fix]")));
+		}
+		source.sendSuccess(() -> list, false);
+		return all.size();
 	}
 
 	private static int whitelistAddWithName(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -62,7 +127,7 @@ public final class NickCommands {
 		MinecraftServer server = source.getServer();
 		String nick = clean(StringArgumentType.getString(ctx, "name"));
 		if (nick == null) {
-			source.sendFailure(Component.literal("That name is empty or longer than " + MAX_LENGTH + " characters."));
+			source.sendFailure(Component.literal(INVALID_NAME));
 			return 0;
 		}
 
@@ -80,7 +145,7 @@ public final class NickCommands {
 
 			NickStore.set(id, username, nick);
 			ServerPlayer online = server.getPlayerList().getPlayer(id);
-			if (online != null) NameTags.refresh(server, online);
+			if (online != null) NameSync.refresh(server, online);
 
 			source.sendSuccess(() -> Component.literal(username + " will now go by \"" + nick + "\""), true);
 			count++;
@@ -94,7 +159,7 @@ public final class NickCommands {
 		String query = StringArgumentType.getString(ctx, "player");
 		String nick = clean(StringArgumentType.getString(ctx, "newname"));
 		if (nick == null) {
-			source.sendFailure(Component.literal("That name is empty or longer than " + MAX_LENGTH + " characters."));
+			source.sendFailure(Component.literal(INVALID_NAME));
 			return 0;
 		}
 
@@ -122,7 +187,7 @@ public final class NickCommands {
 		String old = NickStore.getNick(id);
 		NickStore.set(id, username, nick);
 		ServerPlayer online = server.getPlayerList().getPlayer(id);
-		if (online != null) NameTags.refresh(server, online);
+		if (online != null) NameSync.refresh(server, online);
 
 		String from = old != null ? old : username;
 		source.sendSuccess(() -> Component.literal("Renamed " + from + " (" + username + ") to \"" + nick + "\""), true);
@@ -169,7 +234,7 @@ public final class NickCommands {
 		return s;
 	}
 
-	/** Trims, strips formatting/control characters and surrounding quotes, enforces max length. Returns null if invalid. */
+	/** Trims, strips formatting/control characters and surrounding quotes. Returns null if not a valid nickname. */
 	private static String clean(String raw) {
 		StringBuilder sb = new StringBuilder();
 		for (char c : raw.toCharArray()) {
@@ -180,6 +245,6 @@ public final class NickCommands {
 		if (s.length() >= 2 && s.startsWith("\"") && s.endsWith("\"")) {
 			s = s.substring(1, s.length() - 1).strip();
 		}
-		return (s.isEmpty() || s.length() > MAX_LENGTH) ? null : s;
+		return NameSync.isValidNick(s) ? s : null;
 	}
 }

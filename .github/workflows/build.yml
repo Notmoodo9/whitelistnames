@@ -24,7 +24,7 @@ jobs:
       - name: Find jar
         id: jar
         run: echo "path=$(ls build/libs/*.jar | grep -v -- '-sources' | head -n1)" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: whitelistnames
           path: ${{ steps.jar.outputs.path }}
@@ -63,9 +63,10 @@ jobs:
           smoke=0; timeout 120 python3 .github/smoke/rcon.py || smoke=$?
           sleep 3
           echo '===== server log (filtered)'
-          grep -nE 'whitelistnames|Whitelist|[Mm]ixin|ERROR|Exception|WARN|Done \(' server.log | head -80
+          grep -nE 'whitelistnames|Whitelist|[Mm]ixin|Self-test|ERROR|Exception|WARN|Done \(' server.log | head -80
           echo '===== last lines'
           tail -30 server.log
           pkill -f runServer || true; pkill java || true
           grep -q 'Done (' server.log || { echo 'SERVER DID NOT START'; exit 1; }
+          grep -q 'Self-test OK' server.log || { echo 'MIXIN SELF-TEST DID NOT PASS'; exit 1; }
           exit $smoke

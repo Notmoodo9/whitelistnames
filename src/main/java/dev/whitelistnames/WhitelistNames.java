@@ -2,8 +2,8 @@ package dev.whitelistnames;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
@@ -23,10 +23,37 @@ public class WhitelistNames implements ModInitializer {
 			RecipeCommands.register(dispatcher);
 		});
 
-		ServerLifecycleEvents.SERVER_STARTED.register(NameTags::setupTeam);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-				NameTags.onJoin(server, handler.getPlayer()));
-		ServerLifecycleEvents.SERVER_STOPPING.register(NameTags::removeAll);
-		ServerTickEvents.END_SERVER_TICK.register(NameTags::tick);
+				NickStore.updateUsername(handler.getPlayer().getUUID(), handler.getPlayer().getName().getString()));
+
+		// Clean up after older versions of the mod (floating nametag entities and their team)
+		ServerLifecycleEvents.SERVER_STARTED.register(NameSync::removeLegacyTeam);
+		ServerEntityEvents.ENTITY_LOAD.register(NameSync::onEntityLoad);
+
+		// CI/dev only (set in build.gradle for runServer): make sure every mixin applies on this version.
+		if (Boolean.getBoolean("whitelistnames.selftest")) {
+			ServerLifecycleEvents.SERVER_STARTED.register(server -> selfTest());
+		}
+	}
+
+	/**
+	 * Some mixin targets only load when a player connects, so a broken mixin would only show up then.
+	 * Loading them here makes it fail on startup instead.
+	 */
+	private static void selfTest() {
+		String[] targets = {
+				"net.minecraft.server.network.ServerCommonPacketListenerImpl",
+				"net.minecraft.server.network.ServerGamePacketListenerImpl",
+				"net.minecraft.server.level.ChunkMap$TrackedEntity",
+				"net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket",
+				"net.minecraft.server.level.ServerPlayer",
+				"net.minecraft.world.item.crafting.RecipeCache",
+		};
+		try {
+			for (String target : targets) Class.forName(target, false, WhitelistNames.class.getClassLoader());
+		} catch (ClassNotFoundException e) {
+			throw new IllegalStateException("Self-test failed", e);
+		}
+		LOGGER.info("Self-test OK: {} mixin targets loaded", targets.length);
 	}
 }
