@@ -26,8 +26,6 @@ public class WhitelistNames implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STARTED.register(NameTags::setupTeam);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
 				NameTags.onJoin(server, handler.getPlayer()));
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-				NameTags.onDisconnect(server, handler.getPlayer()));
 		ServerLifecycleEvents.SERVER_STOPPING.register(NameTags::removeAll);
 		ServerTickEvents.END_SERVER_TICK.register(NameTags::tick);
 	}
