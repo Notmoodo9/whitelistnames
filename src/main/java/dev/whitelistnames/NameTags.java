@@ -6,8 +6,11 @@ import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -20,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class NameTags {
 	public static final String TEAM = "wn_nicknamed";
 	public static final String COMMON_TAG = "wn_nametag";
-	private static final String ORPHAN_TAG = "wn_orphan";
 	/** Player UUID -> UUID of the text display riding them. */
 	private static final Map<UUID, UUID> DISPLAYS = new ConcurrentHashMap<>();
 	/** UUIDs of all our nametag displays (see EntityMixin). */
@@ -32,10 +34,6 @@ public final class NameTags {
 	private static int ticks;
 
 	private NameTags() {}
-
-	private static String tagFor(UUID id) {
-		return "wn_" + id;
-	}
 
 	private static void run(MinecraftServer server, String command) {
 		server.getCommands().performPrefixedCommand(
@@ -108,7 +106,6 @@ public final class NameTags {
 
 	private static void spawnTag(MinecraftServer server, ServerPlayer player, String nick) {
 		String uuid = player.getUUID().toString();
-		String tag = tagFor(player.getUUID());
 		removeTag(server, player.getUUID());
 
 		// Summon with a known UUID so we can find the exact entity afterwards.
@@ -118,7 +115,7 @@ public final class NameTags {
 				+ "text:\"" + escape(nick) + "\","
 				+ "billboard:\"center\","
 				+ "see_through:1b,"
-				+ "Tags:[\"" + COMMON_TAG + "\",\"" + tag + "\"],"
+				+ "Tags:[\"" + COMMON_TAG + "\"],"
 				+ "transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],"
 				+ "translation:[0f,0.35f,0f],scale:[1f,1f,1f]}}");
 
@@ -168,31 +165,53 @@ public final class NameTags {
 		}
 	}
 
-	public static void onDisconnect(MinecraftServer server, ServerPlayer player) {
+	/** Called just before a player is removed from the server (logging off or being kicked). */
+	public static void onLeave(MinecraftServer server, ServerPlayer player) {
 		removeTag(server, player.getUUID());
 		WARNED.remove(player.getUUID());
+	}
+
+	/** Removes a player's nametag entity, wherever it is. */
+	public static void removeTag(MinecraftServer server, UUID playerId) {
+		UUID displayId = DISPLAYS.remove(playerId);
+		if (displayId == null) return;
+		NAMETAG_IDS.remove(displayId);
+		for (ServerLevel level : server.getAllLevels()) {
+			Entity display = level.getEntity(displayId);
+			if (display != null) discard(display);
+		}
 	}
 
 	/** Removes every nametag so none get saved into the world when the server stops. */
 	public static void removeAll(MinecraftServer server) {
 		DISPLAYS.clear();
 		NAMETAG_IDS.clear();
-		run(server, "kill @e[type=minecraft:text_display,tag=" + COMMON_TAG + "]");
+		cleanupOrphans(server);
 	}
 
-	public static void removeTag(MinecraftServer server, UUID id) {
-		UUID displayId = DISPLAYS.remove(id);
-		if (displayId != null) NAMETAG_IDS.remove(displayId);
-		run(server, "kill @e[type=minecraft:text_display,tag=" + tagFor(id) + "]");
-	}
-
-	/** Removes nametag displays that got left behind (not riding anyone). */
+	/**
+	 * Removes any nametag entity that isn't the current tag of an online player, or that has lost its
+	 * player (e.g. left behind by a logoff, a crash or a dimension change).
+	 */
 	private static void cleanupOrphans(MinecraftServer server) {
-		// Mark every nametag, unmark the ones riding something, kill the rest.
-		run(server, "tag @e[type=minecraft:text_display,tag=" + COMMON_TAG + "] add " + ORPHAN_TAG);
-		run(server, "execute as @e[type=minecraft:text_display,tag=" + COMMON_TAG + "] on vehicle on passengers"
-				+ " run tag @s remove " + ORPHAN_TAG);
-		run(server, "kill @e[type=minecraft:text_display,tag=" + ORPHAN_TAG + "]");
+		// Forget tags of players who aren't online any more.
+		DISPLAYS.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+		NAMETAG_IDS.retainAll(DISPLAYS.values());
+
+		for (ServerLevel level : server.getAllLevels()) {
+			List<Entity> doomed = new ArrayList<>();
+			for (Entity e : level.getAllEntities()) {
+				if (!(e instanceof Display) || !e.entityTags().contains(COMMON_TAG)) continue;
+				Entity vehicle = e.getVehicle();
+				if (!NAMETAG_IDS.contains(e.getUUID()) || vehicle == null || vehicle.isRemoved()) doomed.add(e);
+			}
+			doomed.forEach(NameTags::discard);
+		}
+	}
+
+	private static void discard(Entity display) {
+		if (display.isPassenger()) display.stopRiding();
+		display.discard();
 	}
 
 	/** SNBT int array form of a UUID, e.g. [I;1,2,3,4]. */
