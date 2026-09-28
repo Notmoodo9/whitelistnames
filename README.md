@@ -47,5 +47,6 @@ Needs JDK 25. Run `./gradlew build`; the mod is `build/libs/whitelistnames-<vers
 
 ## Downloading the jar
 - **Latest build:** the "Latest build" release on the repo's Releases page, updated on every push to `main`.
-- **Versioned release:** push a tag, e.g. `git tag v1.0.1 && git push origin v1.0.1`, and a release with the jar is created.
+- **Versioned release:** bump `mod_version` in `gradle.properties` and merge to `main`; a `v<version>` release
+  with the jar is created automatically (pushing a tag like `v1.0.1` works too).
 - **Any branch/PR:** each workflow run in the Actions tab has the jar as a zipped artifact.
