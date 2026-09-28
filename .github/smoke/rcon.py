@@ -43,6 +43,11 @@ cmds = [
     ('namecheck notch', 'Notch goes by MrNotch'),
     ('namecheck Nobody', 'Nobody has the nickname'),
     ('nicks', 'Jebby = jeb_'),
+    # Xaero fair-play toggle
+    ('minimapfairplay', 'is on'),
+    ('minimapfairplay disable', 'now off'),
+    ('minimapfairplay', 'is off'),
+    ('minimapfairplay enable', 'now on'),
     # Eye of Ender recipe
     ('eyerecipe', 'is enabled'),
     'eyerecipe disable',
