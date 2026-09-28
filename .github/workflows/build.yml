@@ -61,8 +61,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "${{ steps.jar.outputs.path }}" \
-            --title "Whitelist Names $GITHUB_REF_NAME" --generate-notes
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists"
+          else
+            gh release create "$GITHUB_REF_NAME" "${{ steps.jar.outputs.path }}" \
+              --title "Whitelist Names $GITHUB_REF_NAME" --generate-notes
+          fi
 
       # Starts a real server with the mod and runs the mod's commands over RCON.
       - name: Smoke test on a real server
