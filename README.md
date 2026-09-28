@@ -27,6 +27,10 @@ Anywhere a command takes an online player (`/tp`, `/msg`, `/give`, `/kill`, ...)
 their username or their nickname. Nicknames also show up in tab-complete.
 Commands that take offline profiles (`/whitelist`, `/op`, `/ban`) still need the real username.
 
+## Xaero's Minimap / World Map
+Players are sent Xaero's fair-play code (`§f§a§i§r§x§a§e§r§o`) when they join, which turns off
+cave mode (including on the world map) and the entity radar. It shows up as an empty chat line.
+
 ## Upgrading from an older version
 Older versions put a floating text entity above players and added them to the team `wn_nicknamed`.
 This version removes both automatically. Nicknames with spaces or over 16 characters from older
