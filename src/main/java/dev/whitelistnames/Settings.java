@@ -15,6 +15,7 @@ import java.util.Optional;
 public final class Settings {
 	private static Path file;
 	private static volatile boolean eyeOfEnderRecipeDisabled;
+	private static volatile boolean xaeroFairPlay = true;
 	/** Bumped on every recipe toggle so caches know to refresh. */
 	private static volatile int recipeGeneration;
 
@@ -28,6 +29,9 @@ public final class Settings {
 			if (root.has("eyeOfEnderRecipeDisabled")) {
 				eyeOfEnderRecipeDisabled = root.get("eyeOfEnderRecipeDisabled").getAsBoolean();
 			}
+			if (root.has("xaeroFairPlay")) {
+				xaeroFairPlay = root.get("xaeroFairPlay").getAsBoolean();
+			}
 		} catch (Exception ex) {
 			WhitelistNames.LOGGER.error("Could not read {}", path, ex);
 		}
@@ -36,6 +40,7 @@ public final class Settings {
 	private static void save() {
 		JsonObject root = new JsonObject();
 		root.addProperty("eyeOfEnderRecipeDisabled", eyeOfEnderRecipeDisabled);
+		root.addProperty("xaeroFairPlay", xaeroFairPlay);
 		try {
 			Files.createDirectories(file.getParent());
 			try (Writer writer = Files.newBufferedWriter(file)) {
@@ -44,6 +49,15 @@ public final class Settings {
 		} catch (Exception ex) {
 			WhitelistNames.LOGGER.error("Could not save {}", file, ex);
 		}
+	}
+
+	public static boolean isXaeroFairPlay() {
+		return xaeroFairPlay;
+	}
+
+	public static void setXaeroFairPlay(boolean on) {
+		xaeroFairPlay = on;
+		save();
 	}
 
 	public static boolean isEyeOfEnderRecipeDisabled() {

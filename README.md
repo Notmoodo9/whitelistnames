@@ -31,6 +31,10 @@ Commands that take offline profiles (`/whitelist`, `/op`, `/ban`) still need the
 Players are sent Xaero's fair-play code (`§f§a§i§r§x§a§e§r§o`) when they join, which turns off
 cave mode (including on the world map) and the entity radar. It shows up as an empty chat line.
 
+- `/minimapfairplay disable` / `/minimapfairplay enable` - turns the message off or on (ops only, on by default).
+  `/minimapfairplay` on its own shows whether it's on. Enabling it also sends it to everyone online.
+  Players who already got it keep fair-play until they rejoin. Saved in `config/whitelistnames-settings.json`.
+
 ## Upgrading from an older version
 Older versions put a floating text entity above players and added them to the team `wn_nicknamed`.
 This version removes both automatically. Nicknames with spaces or over 16 characters from older
@@ -38,10 +42,10 @@ versions still show in chat and the tab list, but not above the head until you `
 `/nicks` marks them.
 
 ## Building
-Needs JDK 25. Run `./gradlew build`; the mod is `build/libs/whitelistnames-1.0.0.jar`
+Needs JDK 25. Run `./gradlew build`; the mod is `build/libs/whitelistnames-<version>.jar`
 (not the `-sources` one). Put it plus Fabric API in the server's `mods` folder.
 
 ## Downloading the jar
 - **Latest build:** the "Latest build" release on the repo's Releases page, updated on every push to `main`.
-- **Versioned release:** push a tag, e.g. `git tag v1.0.0 && git push origin v1.0.0`, and a release with the jar is created.
+- **Versioned release:** push a tag, e.g. `git tag v1.0.1 && git push origin v1.0.1`, and a release with the jar is created.
 - **Any branch/PR:** each workflow run in the Actions tab has the jar as a zipped artifact.
