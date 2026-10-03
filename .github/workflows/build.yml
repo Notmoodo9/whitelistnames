@@ -21,6 +21,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       - name: Build
         run: ./gradlew build --stacktrace
+      - name: TEMP inspect status code
+        run: |
+          jar=$(find ~/.gradle/caches .gradle -name 'minecraft-*.jar' 2>/dev/null | grep -iE 'merged|server|common' | head -n1); echo "$jar"
+          find ~/.gradle/caches .gradle -name '*.jar' 2>/dev/null | grep -i minecraft | head -20
+          for c in 'net.minecraft.network.protocol.status.ServerStatus$Players' 'net.minecraft.server.MinecraftServer' 'net.minecraft.server.players.NameAndId'; do javap -p -cp "$jar" "$c" | grep -iE 'class|record|Players|sample|status|NameAndId|ANONYMOUS|<init>' ; done
+          javap -c -p -cp "$jar" net.minecraft.server.MinecraftServer | awk '/buildPlayerStatus/,/^$/' | head -120
+          true
       - name: Find jar
         id: jar
         run: echo "path=$(ls build/libs/*.jar | grep -v -- '-sources' | head -n1)" >> "$GITHUB_OUTPUT"
