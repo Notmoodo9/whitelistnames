@@ -146,6 +146,7 @@ public final class NickCommands {
 			NickStore.set(id, username, nick);
 			ServerPlayer online = server.getPlayerList().getPlayer(id);
 			if (online != null) NameSync.refresh(server, online);
+		server.invalidateStatus();
 
 			source.sendSuccess(() -> Component.literal(username + " will now go by \"" + nick + "\""), true);
 			count++;
@@ -188,6 +189,7 @@ public final class NickCommands {
 		NickStore.set(id, username, nick);
 		ServerPlayer online = server.getPlayerList().getPlayer(id);
 		if (online != null) NameSync.refresh(server, online);
+		server.invalidateStatus();
 
 		String from = old != null ? old : username;
 		source.sendSuccess(() -> Component.literal("Renamed " + from + " (" + username + ") to \"" + nick + "\""), true);
