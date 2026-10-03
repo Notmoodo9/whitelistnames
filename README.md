@@ -2,8 +2,8 @@
 
 Server-side only. Players don't need to install anything.
 
-Whitelisted players get a nickname that shows in chat, join/leave/death messages, the tab list
-and on their vanilla nametag. Other players' games are told the nickname as the player's name, so the
+Whitelisted players get a nickname that shows in chat, join/leave/death messages, the tab list,
+on their vanilla nametag, and in the player list when you hover the player count in the server list. Other players' games are told the nickname as the player's name, so the
 nametag above their head is the real vanilla one (dims when sneaking, hidden when invisible). Each
 player still sees their own real name, and the server itself keeps using real usernames.
 

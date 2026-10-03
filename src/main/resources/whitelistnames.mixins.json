@@ -12,7 +12,8 @@
     "PlayerListMixin",
     "CommandSourceStackMixin",
     "RecipeManagerMixin",
-    "RecipeCacheMixin"
+    "RecipeCacheMixin",
+    "MinecraftServerMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }
