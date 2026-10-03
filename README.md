@@ -1,4 +1,4 @@
-# Whitelist Names (Fabric, Minecraft 26.2)
+# Whitelist Names (Fabric, Minecraft 26.3)
 
 Server-side only. Players don't need to install anything.
 
